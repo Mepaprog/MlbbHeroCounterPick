@@ -1,0 +1,1819 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MLBB PICKING</title>
+  <style>
+    header {
+      grid-area: header;
+      position: relative;
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      overflow: hidden;
+      border-bottom: 1px solid rgba(255,255,255,.25);
+      box-shadow: 0 4px 18px rgba(0,0,0,.28);
+      background: linear-gradient(90deg, #0a57c9 0%, #1769d2 var(--blue-fill, 50%), #b91c2b var(--blue-fill, 50%), #74101c 100%);
+    }
+
+    .header-side {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      height: 100%;
+      padding: 0 18px;
+      color: white;
+      font-weight: 900;
+      letter-spacing: 1px;
+    }
+
+    .blue-side {
+      justify-content: flex-start;
+      background: transparent;
+    }
+
+    .red-side {
+      justify-content: flex-end;
+      background: transparent;
+    }
+
+    .team-label { display: none; }
+
+    .team-score {
+      font-size: 26px;
+      text-shadow: 0 2px 8px rgba(0,0,0,.55);
+    }
+
+    .header-center {
+      position: relative;
+      z-index: 3;
+      background: rgba(0,0,0,.34);
+      border: 1px solid rgba(255,255,255,.22);
+      border-radius: 999px;
+      padding: 8px 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      backdrop-filter: blur(4px);
+    }
+
+    .title { font-size: 20px; font-weight: 900; letter-spacing: 3px; }
+
+    .draft-stats { display: none; }
+
+    * {
+      padding: 0;
+      margin: 0;
+      box-sizing: border-box;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    body {
+      background: #427AB5;
+      display: grid;
+      grid-template-rows: 70px 1fr;
+      grid-template-columns: 160px 1fr 1fr 160px;
+      grid-template-areas:
+        "header header header header"
+        "team rec list enemy";
+      height: 100svh;
+      color: white;
+      overflow: hidden;
+    }
+
+    header {
+      font-weight: 900;
+      letter-spacing: 2px;
+      font-size: 23px;
+      text-shadow: 0 3px 8px rgba(0,0,0,.45);
+    }
+
+    .Team,
+    .Enemy,
+    .Hero-Recommendation,
+    .Hero-List {
+      border: 1px solid rgba(255,255,255,.25);
+      background: rgba(4, 21, 48, .55);
+      min-height: 0;
+    }
+
+    .Team, .Enemy {
+      display: flex;
+      flex-direction: column;
+      justify-content: start;
+    }
+
+    .Team { grid-area: team; }
+    .Enemy { grid-area: enemy; }
+    .Hero-Recommendation {
+      grid-area: rec;
+      display: grid;
+      grid-template-rows: 36px repeat(5, minmax(0, 1fr));
+      min-height: 0;
+    }
+    .Hero-List { grid-area: list; display: flex; flex-direction: column; }
+
+    .side-title,
+    .panel-title {
+      height: 36px;
+      flex: 0 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-bottom: 1px solid rgba(255,255,255,.25);
+      background: rgba(0,0,0,.25);
+      font-weight: 900;
+      letter-spacing: 1px;
+      font-size: 13px;
+    }
+
+    .slot {
+      position: relative;
+      border: 1px solid rgba(255,255,255,.22);
+      flex: 1 1 0;
+      min-height: 0;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      transition: .16s ease;
+      background: linear-gradient(145deg, rgba(255,255,255,.07), rgba(0,0,0,.14));
+    }
+
+    .slot:hover {
+      background: rgba(255,255,255,.13);
+      box-shadow: inset 0 0 18px rgba(255,255,255,.08);
+    }
+
+    .slot.active {
+      outline: 3px solid #ffe26b;
+      outline-offset: -3px;
+      background: rgba(255, 226, 107, .15);
+    }
+
+    .delete-pick {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      border: 1px solid rgba(255,255,255,.35);
+      background: rgba(160, 20, 35, .82);
+      color: white;
+      font-size: 14px;
+      font-weight: 900;
+      line-height: 1;
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+      z-index: 2;
+    }
+
+    .delete-pick:hover {
+      background: rgba(220, 38, 38, .95);
+      border-color: rgba(255,255,255,.65);
+    }
+
+    .pool-remove {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      border: 1px solid rgba(255,255,255,.28);
+      background: rgba(160,20,35,.8);
+      color: white;
+      font-size: 11px;
+      font-weight: 900;
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+      z-index: 2;
+    }
+
+    .pool-remove:hover {
+      background: rgba(220,38,38,.95);
+    }
+
+    .portrait {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(145deg, #315a91, #0c1f3e);
+      border: 2px solid rgba(255,255,255,.4);
+      font-weight: 900;
+      font-size: 16px;
+      overflow: hidden;
+    }
+
+    .portrait img{
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 50%;
+      display: block;
+    }
+
+    .hero-name {
+      font-weight: 900;
+      font-size: 13px;
+      text-align: center;
+      max-width: 135px;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+
+    .small-text {
+      color: rgba(255,255,255,.72);
+      font-size: 11px;
+      text-align: center;
+    }
+
+    .role-select {
+      width: 100%;
+      max-width: 132px;
+      border: 1px solid rgba(255,255,255,.28);
+      background: rgba(0,0,0,.35);
+      color: white;
+      padding: 5px;
+      border-radius: 8px;
+      font-size: 11px;
+      cursor: pointer;
+    }
+
+    .role-select option { color: black; }
+
+    .recommend-slot {
+      border: 1px solid rgba(255,255,255,.22);
+      min-height: 0;
+      padding: 8px;
+      overflow: auto;
+      background: rgba(0,0,0,.12);
+    }
+
+    .recommend-content {
+      height: 100%;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      min-height: 0;
+    }
+
+    .my-heroes,
+    .recommend-hero {
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: 10px 18px;
+      min-height: 0;
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 8px;
+      background: rgba(0,0,0,.12);
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 48px));
+      grid-auto-rows: 48px;
+      justify-content: center;
+      align-content: start;
+      column-gap: 15px;
+      row-gap: 10px;
+    }
+
+    .recommend-row-title {
+      font-size: 9px;
+      font-weight: 900;
+      color: rgba(255,255,255,.72);
+      letter-spacing: .8px;
+      margin-top: 3px;
+    }
+
+    .recommend-row-title span {
+      color: #ffe26b;
+    }
+
+    .my-heroes {
+      border-color: rgba(63, 255, 169, .18);
+    }
+
+
+
+    .recommend-hero {
+      border-color: rgba(255, 226, 107, .18);
+      margin-left: 8px;
+      margin-right: 8px;
+      padding-left: 18px;
+      padding-right: 18px;
+    }
+
+    .my-hero-card {
+      border-color: rgba(63, 255, 169, .35) !important;
+      background: rgba(63, 255, 169, .10) !important;
+    }
+
+    .rec-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 7px;
+      font-size: 12px;
+      font-weight: 900;
+      color: #ffe26b;
+    }
+
+    .rec-role {
+      color: #c7e6ff;
+      font-size: 11px;
+      font-weight: normal;
+    }
+
+    .rec-card {
+      position: relative;
+      width: 48px;
+      height: 48px;
+      border: 1px solid rgba(255,255,255,.22);
+      background: rgba(255,255,255,.08);
+      border-radius: 10px;
+      padding: 0;
+      cursor: pointer;
+      transition: .15s ease;
+      overflow: hidden;
+    }
+
+    .rank-num {
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: rgba(0,0,0,.62);
+      border: 1px solid rgba(255, 226, 107, .55);
+      color: #ffe26b;
+      font-size: 10px;
+      font-weight: 900;
+      z-index: 2;
+    }
+
+    .rec-card img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .rec-card strong {
+      display: none;
+    }
+
+    .rec-card:hover {
+      background: rgba(63, 255, 169, .16);
+      border-color: rgba(63,255,169,.45);
+    }
+
+    
+
+    .search {
+      border-bottom: 1px solid rgba(255,255,255,.25);
+      min-height: 58px;
+      padding: 9px;
+      display: grid;
+      grid-template-columns: 1fr 90px 110px;
+      gap: 8px;
+      background: rgba(0,0,0,.2);
+    }
+
+    input,
+    select {
+      border: 1px solid rgba(255,255,255,.25);
+      background: rgba(0,0,0,.35);
+      color: white;
+      border-radius: 8px;
+      padding: 9px;
+      outline: none;
+      width: 100%;
+    }
+
+    input::placeholder { color: rgba(255,255,255,.55); }
+
+    .clear-search-btn {
+      border: 1px solid rgba(255,255,255,.22);
+      background: rgba(255,255,255,.08);
+      color: white;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 700;
+      transition: .15s ease;
+    }
+
+    .clear-search-btn:hover {
+      background: rgba(255,255,255,.18);
+      border-color: rgba(255,255,255,.45);
+    }
+    select option { color: black; }
+
+    .hero-list {
+      overflow-y: auto;
+      padding: 10px;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+      align-content: start;
+    }
+
+    .hero-card {
+      position: relative;
+      min-height: 68px;
+      border: 1px solid rgba(255,255,255,.22);
+      background: rgba(255,255,255,.09);
+      border-radius: 10px;
+      color: white;
+      cursor: pointer;
+      padding: 8px;
+      text-align: left;
+      transition: .15s ease;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .hero-list-icon{
+      width: 46px;
+      height: 46px;
+      flex-shrink: 0;
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,.18);
+      background: rgba(0,0,0,.25);
+    }
+
+    .hero-list-icon img{
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .hero-list-info{
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      flex: 1;
+    }
+
+    .hero-card-actions{
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin-left: 0;
+      flex-shrink: 0;
+      z-index: 3;
+    }
+
+    .hero-action-btn{
+      border: 1px solid rgba(255,255,255,.22);
+      background: rgba(255,255,255,.1);
+      color: white;
+      border-radius: 6px;
+      padding: 4px 8px;
+      font-size: 10px;
+      font-weight: 900;
+      cursor: pointer;
+      transition: .15s ease;
+      min-width: 52px;
+    }
+
+    .hero-action-btn:hover{
+      background: rgba(255,226,107,.22);
+      border-color: rgba(255,226,107,.65);
+    }
+
+    .hero-list-info strong{
+      display: block;
+      font-size: 13px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .hero-list-info small{
+      color: rgba(255,255,255,.7);
+      font-size: 11px;
+    }
+
+    .hero-card:hover {
+      transform: translateY(-2px);
+      background: rgba(255,255,255,.17);
+      border-color: #ffe26b;
+    }
+
+    .hero-card.added-to-pool,
+    .hero-card.picked-hero {
+      border-color: rgba(63,255,169,.85);
+      background: rgba(63,255,169,.18);
+      box-shadow: inset 0 0 0 1px rgba(63,255,169,.45);
+    }
+
+    .hero-card.picked-hero {
+      border-color: rgba(255, 226, 107, .9);
+      background: rgba(255, 226, 107, .18);
+      box-shadow: inset 0 0 0 1px rgba(255,226,107,.45);
+    }
+
+    .hero-card.added-to-pool {
+      border-color: rgba(63,255,169,.85);
+      background: rgba(63,255,169,.18);
+      box-shadow: inset 0 0 0 1px rgba(63,255,169,.45);
+    }
+
+    .hero-card.added-to-pool strong {
+      color: #8fffd0;
+    }
+
+    .hero-card-check {
+      position: absolute;
+      top: 6px;
+      left: 6px;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: rgba(63,255,169,.95);
+      color: #082015;
+      font-size: 13px;
+      font-weight: 900;
+      border: 1px solid rgba(255,255,255,.55);
+      box-shadow: 0 0 10px rgba(63,255,169,.35);
+    }
+
+    .hero-card strong {
+      display: block;
+      font-size: 13px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .hero-card small {
+      color: rgba(255,255,255,.7);
+      font-size: 11px;
+    }
+
+    .empty-message {
+      color: rgba(255,255,255,.65);
+      font-size: 12px;
+      line-height: 1.4;
+      padding: 8px;
+    }
+
+    @media (max-width: 900px) {
+      body {
+        height: auto;
+        min-height: 100svh;
+        overflow: auto;
+        grid-template-rows: 65px auto auto auto auto;
+        grid-template-columns: 1fr;
+        grid-template-areas:
+          "header"
+          "enemy"
+          "team"
+          "rec"
+          "list";
+      }
+
+      .Team,
+      .Enemy,
+      .Hero-Recommendation {
+        min-height: 520px;
+      }
+
+      .Hero-List {
+        min-height: 520px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="header-side blue-side">
+      <div class="team-label">BLUE TEAM</div>
+      <div class="team-score" id="blueWinrate">50%</div>
+    </div>
+
+    <div class="header-center">
+      <div class="title">MLBB PICKING</div>
+      <div class="draft-stats">
+        <span>ADV <b id="advantageStat">50 - 50</b></span>
+        <span>CLASH <b id="clashStat">50 - 50</b></span>
+        <span>LANE <b id="laneStat">50 - 50</b></span>
+      </div>
+    </div>
+
+    <div class="header-side red-side">
+      <div class="team-label">RED TEAM</div>
+      <div class="team-score" id="redWinrate">50%</div>
+    </div>
+  </header>
+
+  <div class="Team" id="teamSlots">
+    <div class="side-title">MY TEAM ROLE SETUP</div>
+  </div>
+
+  <div class="Hero-Recommendation" id="recommendSlots">
+    <div class="panel-title">COUNTER PICK ADVANTAGE RECOMMENDATIONS</div>
+  </div>
+
+  <div class="Hero-List">
+    <div class="panel-title">HERO LIST - CLICK A SLOT THEN PICK HERO</div>
+    <div class="search">
+      <input id="searchInput" type="text" placeholder="Search hero...">
+      <button class="clear-search-btn" id="clearSearchBtn">Clear</button>
+
+      <select id="heroRoleFilter">
+        <option>All</option>
+        <option>Tank</option>
+        <option>Fighter</option>
+        <option>Assassin</option>
+        <option>Mage</option>
+        <option>Marksman</option>
+        <option>Support</option>
+      </select>
+    </div>
+    <div class="hero-list" id="heroList"></div>
+  </div>
+
+  <div class="Enemy" id="enemySlots">
+    <div class="side-title">ENEMY TEAM PICKS</div>
+  </div>
+
+  <script>
+    const heroes = [
+      h("Miya", "Marksman", "Gold", ["scaling", "dps", "attack-speed"]),
+      h("Balmond", "Fighter", "Jungle/EXP", ["sustain", "execute", "objective"]),
+      h("Saber", "Assassin", "Jungle/Roam", ["single-target", "burst", "lock"]),
+      h("Alice", "Mage", "EXP/Jungle", ["sustain", "dive", "scaling"]),
+      h("Nana", "Mage", "Mid", ["morph", "poke", "safety"]),
+      h("Tigreal", "Tank", "Roam", ["set", "aoe-cc", "frontline"]),
+      h("Alucard", "Fighter", "Jungle", ["lifesteal", "snowball", "dive"]),
+      h("Karina", "Assassin", "Jungle", ["reset", "magic", "burst"]),
+      h("Akai", "Tank", "Roam/Jungle", ["frontline", "cc", "anti-dash"]),
+      h("Franco", "Tank", "Roam", ["hook", "suppress", "pickoff"]),
+      h("Bane", "Fighter", "EXP/Jungle", ["push", "poke", "hybrid"]),
+      h("Bruno", "Marksman", "Gold", ["crit", "burst", "scaling"]),
+      h("Clint", "Marksman", "Gold", ["poke", "burst", "lane-bully"]),
+      h("Rafaela", "Support", "Roam", ["speed", "heal", "poke"]),
+      h("Eudora", "Mage", "Mid", ["burst", "stun", "pickoff"]),
+      h("Zilong", "Fighter", "EXP", ["split-push", "pickoff", "speed"]),
+      h("Fanny", "Assassin", "Jungle", ["mobility", "energy", "snowball"]),
+      h("Layla", "Marksman", "Gold", ["range", "scaling", "siege"]),
+      h("Minotaur", "Tank", "Roam", ["set", "heal", "teamfight"]),
+      h("Lolita", "Tank", "Roam", ["shield", "set", "anti-projectile"]),
+      h("Hayabusa", "Assassin", "Jungle", ["split-push", "pickoff", "untargetable"]),
+      h("Freya", "Fighter", "EXP/Jungle", ["duel", "shield", "dps"]),
+      h("Gord", "Mage", "Mid", ["poke", "true-damage", "zone"]),
+      h("Natalia", "Assassin", "Roam/Jungle", ["stealth", "pickoff", "silence"]),
+      h("Kagura", "Mage", "Mid", ["poke", "cleanse", "burst"]),
+      h("Chou", "Fighter", "EXP/Roam", ["pickoff", "kick", "outplay"]),
+      h("Sun", "Fighter", "EXP/Jungle", ["split-push", "clone", "dps"]),
+      h("Alpha", "Fighter", "Jungle/EXP", ["sustain", "true-damage", "duel"]),
+      h("Ruby", "Fighter", "EXP/Roam", ["cc-chain", "sustain", "anti-dive"]),
+      h("Yi Sun-shin", "Assassin", "Jungle", ["global", "objective", "hybrid"]),
+      h("Moskov", "Marksman", "Gold", ["attack-speed", "stun", "split-push"]),
+      h("Johnson", "Tank", "Roam", ["global", "crash", "pickoff"]),
+      h("Cyclops", "Mage", "Mid", ["lock", "burst", "chase"]),
+      h("Estes", "Support", "Roam", ["heal", "group", "sustain"]),
+      h("Hilda", "Fighter", "Roam/EXP", ["invade", "regen", "early"]),
+      h("Aurora", "Mage", "Mid", ["freeze", "burst", "control"]),
+      h("Lapu-Lapu", "Fighter", "EXP", ["teamfight", "dive", "durable"]),
+      h("Vexana", "Mage", "Mid", ["cc", "summon", "teamfight"]),
+      h("Roger", "Fighter", "Jungle", ["tempo", "chase", "hybrid"]),
+      h("Karrie", "Marksman", "Gold", ["true-damage", "anti-tank", "dps"]),
+      h("Gatotkaca", "Tank", "EXP/Roam", ["anti-dps", "taunt", "global-engage"]),
+      h("Harley", "Assassin", "Jungle/Mid", ["burst", "pickoff", "mobility"]),
+      h("Irithel", "Marksman", "Gold", ["mobile-dps", "crit", "teamfight"]),
+      h("Grock", "Tank", "Roam", ["wall", "pickoff", "early"]),
+      h("Argus", "Fighter", "EXP", ["split-push", "immortality", "duel"]),
+      h("Odette", "Mage", "Mid", ["aoe", "teamfight", "combo"]),
+      h("Lancelot", "Assassin", "Jungle", ["dash", "immune", "burst"]),
+      h("Diggie", "Support", "Roam", ["anti-cc", "vision", "poke"]),
+      h("Hylos", "Tank", "Roam", ["frontline", "slow", "tempo"]),
+      h("Zhask", "Mage", "Mid", ["summon", "siege", "zone"]),
+      h("Helcurt", "Assassin", "Jungle/Roam", ["silence", "darkness", "burst"]),
+      h("Pharsa", "Mage", "Mid", ["range", "artillery", "rotation"]),
+      h("Lesley", "Marksman", "Gold", ["true-damage", "range", "burst"]),
+      h("Jawhead", "Fighter", "Roam/EXP", ["throw", "pickoff", "early"]),
+      h("Angela", "Support", "Roam", ["global", "shield", "heal"]),
+      h("Gusion", "Assassin", "Jungle/Mid", ["burst", "mobility", "combo"]),
+      h("Valir", "Mage", "Mid", ["anti-dive", "pushback", "poke"]),
+      h("Martis", "Fighter", "Jungle/EXP", ["cc-immune", "snowball", "execute"]),
+      h("Uranus", "Tank", "EXP", ["regen", "lane-cut", "sustain"]),
+      h("Hanabi", "Marksman", "Gold", ["teamfight", "bounce", "shield"]),
+      h("Chang'e", "Mage", "Mid", ["poke", "wave-clear", "siege"]),
+      h("Kaja", "Support", "Roam", ["suppress", "pickoff", "anti-carry"]),
+      h("Selena", "Assassin", "Mid/Roam", ["trap", "stun", "pickoff"]),
+      h("Aldous", "Fighter", "EXP", ["scaling", "pickoff", "burst"]),
+      h("Claude", "Marksman", "Gold", ["mobility", "aoe-dps", "scaling"]),
+      h("Vale", "Mage", "Mid", ["burst", "knockup", "zone"]),
+      h("Leomord", "Fighter", "Jungle/EXP", ["snowball", "mount", "execute"]),
+      h("Lunox", "Mage", "Mid", ["anti-tank", "burst", "immune"]),
+      h("Hanzo", "Assassin", "Jungle", ["safe-damage", "invade", "poke"]),
+      h("Belerick", "Tank", "Roam", ["anti-dps", "taunt", "frontline"]),
+      h("Kimmy", "Marksman", "Gold/Mid", ["poke", "hybrid", "kite"]),
+      h("Thamuz", "Fighter", "EXP", ["sustain", "early", "duel"]),
+      h("Harith", "Mage", "Mid/Jungle", ["dash", "shield", "dps"]),
+      h("Minsitthar", "Fighter", "Roam/EXP", ["anti-dash", "zone", "pickoff"]),
+      h("Kadita", "Mage", "Mid/Roam", ["burst", "ambush", "immune"]),
+      h("Faramis", "Support", "Mid/Roam", ["revive", "teamfight", "utility"]),
+      h("Badang", "Fighter", "EXP/Roam", ["wall", "burst", "cc"]),
+      h("Khufra", "Tank", "Roam", ["anti-dash", "set", "frontline"]),
+      h("Granger", "Marksman", "Jungle/Gold", ["burst", "tempo", "skillshot"]),
+      h("Guinevere", "Fighter", "EXP", ["knockup", "burst", "dive"]),
+      h("Esmeralda", "Mage", "EXP", ["shield", "sustain", "dive"]),
+      h("Terizla", "Fighter", "EXP", ["frontline", "teamfight", "sustain"]),
+      h("X.Borg", "Fighter", "EXP", ["true-damage", "poke", "teamfight"]),
+      h("Ling", "Assassin", "Jungle", ["mobility", "split-push", "objective"]),
+      h("Dyrroth", "Fighter", "EXP/Jungle", ["armor-break", "burst", "duel"]),
+      h("Lylia", "Mage", "Mid", ["poke", "reset", "lane-bully"]),
+      h("Baxia", "Tank", "Jungle/Roam", ["anti-heal", "tempo", "durable"]),
+      h("Masha", "Fighter", "EXP", ["split-push", "anti-carry", "durable"]),
+      h("Wanwan", "Marksman", "Gold", ["dash", "cleanse", "snowball"]),
+      h("Silvanna", "Fighter", "EXP", ["lock", "magic", "duel"]),
+      h("Cecilion", "Mage", "Mid", ["scaling", "range", "poke"]),
+      h("Carmilla", "Support", "Roam", ["link", "sustain", "teamfight"]),
+      h("Atlas", "Tank", "Roam", ["set", "aoe-cc", "teamfight"]),
+      h("Popol and Kupa", "Marksman", "Gold/Jungle", ["trap", "vision", "push"]),
+      h("Yu Zhong", "Fighter", "EXP", ["dive", "sustain", "backline"]),
+      h("Luo Yi", "Mage", "Mid", ["group-punish", "teleport", "cc"]),
+      h("Benedetta", "Fighter", "EXP", ["mobility", "outplay", "split-push"]),
+      h("Khaleed", "Fighter", "EXP", ["regen", "early", "dive"]),
+      h("Barats", "Tank", "Jungle/EXP", ["frontline", "sustain", "suppress"]),
+      h("Brody", "Marksman", "Gold", ["burst", "lane-bully", "range"]),
+      h("Yve", "Mage", "Mid", ["zone", "slow", "teamfight"]),
+      h("Mathilda", "Support", "Roam", ["mobility", "shield", "pickoff"]),
+      h("Paquito", "Fighter", "EXP/Jungle", ["burst", "dash", "combo"]),
+      h("Gloo", "Tank", "EXP/Roam", ["sustain", "stick", "disrupt"]),
+      h("Beatrix", "Marksman", "Gold", ["range", "burst", "siege"]),
+      h("Phoveus", "Fighter", "EXP", ["anti-dash", "dive-punish", "teamfight"]),
+      h("Natan", "Marksman", "Gold", ["magic-dps", "scaling", "clone"]),
+      h("Aulus", "Fighter", "Jungle/EXP", ["scaling", "dps", "melee"]),
+      h("Aamon", "Assassin", "Jungle", ["burst", "stealth", "magic"]),
+      h("Valentina", "Mage", "Mid", ["ult-steal", "flex", "burst"]),
+      h("Edith", "Tank", "EXP/Roam", ["cc", "hybrid", "teamfight"]),
+      h("Floryn", "Support", "Roam", ["global", "heal", "utility"]),
+      h("Yin", "Fighter", "Jungle/EXP", ["isolate", "burst", "duel"]),
+      h("Melissa", "Marksman", "Gold", ["anti-melee", "dps", "zone"]),
+      h("Xavier", "Mage", "Mid", ["range", "scaling", "global"]),
+      h("Julian", "Fighter", "Jungle/EXP", ["flex", "combo", "burst"]),
+      h("Fredrinn", "Fighter", "Jungle/EXP", ["frontline", "sustain", "objective"]),
+      h("Joy", "Assassin", "Jungle", ["dash", "immune", "magic-burst"]),
+      h("Novaria", "Mage", "Mid", ["vision", "poke", "range"]),
+      h("Arlott", "Fighter", "EXP", ["dash", "cc", "snowball"]),
+      h("Ixia", "Marksman", "Gold", ["aoe-dps", "siege", "teamfight"]),
+      h("Nolan", "Assassin", "Jungle", ["dash", "burst", "tempo"]),
+      h("Cici", "Fighter", "EXP", ["kite", "sustain", "duel"]),
+      h("Chip", "Support", "Roam", ["portal", "global", "teamfight"]),
+      h("Zhuxin", "Mage", "Mid", ["control", "throw", "teamfight"]),
+      h("Suyou", "Assassin", "Jungle/EXP", ["stance", "burst", "mobility"]),
+      h("Lukas", "Fighter", "EXP/Jungle", ["duel", "sustain", "transform"]),
+      h("Kalea", "Support", "Roam", ["heal", "cc", "utility"]),
+      h("Zetian", "Mage", "Mid", ["control", "range", "utility"]),
+      h("Obsidia", "Marksman", "Gold", ["dps", "range", "scaling"]),
+      h("Sora", "Fighter", "EXP", ["burst", "dive", "duel"]),
+      h("Marcel", "Support", "Roam", ["utility", "cc", "teamfight"])
+    ];
+
+    const counterMap = {
+      Moskov: ["Chou", "Saber", "Natalia", "Badang", "Ling"],
+      Leomord: ["Jawhead", "Chou", "Alpha", "Minsitthar", "Melissa"],
+      Kadita: ["Helcurt", "Natalia", "Minsitthar", "Baxia", "Kaja"],
+      Nana: ["Silvanna", "Chou", "Lancelot", "Hayabusa", "Sun"],
+      Valir: ["Lancelot", "Kaja", "Akai", "Franco", "Hayabusa"],
+      Baxia: ["Gusion", "Grock", "Lesley", "Harley", "Kagura"],
+      Minotaur: ["Freya", "Moskov", "Aurora", "Nana", "Alpha"],
+      Irithel: ["Natalia", "Freya", "Helcurt", "Kagura", "Hayabusa"],
+      Lylia: ["Guinevere", "X.Borg", "Dyrroth", "Franco", "Kaja"],
+      Odette: ["Guinevere", "Chou", "Kagura", "Fanny", "Franco"],
+      Hanzo: ["Ling", "Natalia", "Fanny", "Aldous", "Helcurt"],
+      Faramis: ["X.Borg", "Lylia", "Gusion", "Wanwan", "Pharsa"],
+      Badang: ["Chou", "Benedetta", "Aldous", "Edith", "Argus"],
+      Karrie: ["Hayabusa", "Karina", "Chou", "Lolita", "Natalia"],
+      Kimmy: ["Chou", "Aldous", "Hayabusa", "Lancelot", "Lolita"],
+      Thamuz: ["X.Borg", "Aldous", "Valir", "Baxia", "Cici"],
+      Martis: ["Phoveus", "Kaja", "Franco", "Minsitthar", "Baxia"],
+      Hilda: ["Karrie", "Dyrroth", "Valir", "Thamuz", "Baxia"],
+      Aurora: ["Guinevere", "Natalia", "Hayabusa", "Chou", "Kagura"],
+      Natalia: ["Saber", "Jawhead", "Hayabusa", "Khufra", "Rafaela"],
+      "Chang'e": ["Saber", "Chou", "Lolita", "Jawhead", "Baxia"],
+      Chou: ["Silvanna", "Martis", "Phoveus", "Minsitthar", "Dyrroth"],
+      Selena: ["Wanwan", "Saber", "Benedetta", "Diggie", "Valir"],
+      Jawhead: ["Kagura", "Sun", "Fanny", "Martis", "Valir"],
+      Khufra: ["Baxia", "Minsitthar", "Wanwan", "Valir", "Diggie"],
+      Roger: ["Alucard", "Aurora", "Jawhead", "Martis", "Silvanna"],
+      Lancelot: ["Fanny", "Grock", "Saber", "Argus", "Yin"],
+      Kagura: ["Gusion", "Zilong", "Alucard", "Akai", "Hayabusa"],
+      Tigreal: ["Nana", "Martis", "Eudora", "Valir", "Baxia"],
+      Bruno: ["Moskov", "Alpha", "Freya", "Karrie", "Karina"],
+      Mathilda: ["Baxia", "Franco", "Wanwan", "Vale", "Badang"],
+      Kaja: ["Helcurt", "Grock", "Akai", "Martis", "Gusion"],
+      Guinevere: ["Selena", "Wanwan", "Diggie", "Valir", "Fanny"],
+      Rafaela: ["Karina", "Saber", "Hayabusa", "Natalia", "Moskov"],
+      Hanabi: ["Natalia", "Fanny", "Hayabusa", "Nolan", "Karina"],
+      Miya: ["Natalia", "Karina", "Hayabusa", "Clint", "Fanny"],
+      Johnson: ["Esmeralda", "Zhask", "Jawhead", "Diggie", "Grock"],
+      Gatotkaca: ["Eudora", "Karrie", "Dyrroth", "X.Borg", "Yin"],
+      Julian: ["Aamon", "Helcurt", "Paquito", "Yu Zhong", "Roger"],
+      Melissa: ["Franco", "X.Borg", "Martis", "Yu Zhong", "Hayabusa"],
+      Xavier: ["Helcurt", "Fanny", "Chou", "Gusion", "Lancelot"],
+      Edith: ["Aamon", "Thamuz", "Beatrix", "Minsitthar", "Wanwan"],
+      Yin: ["Thamuz", "Sun", "Argus", "Jawhead", "Valir"],
+      Valentina: ["Wanwan", "Alice", "Sun", "Gusion", "Kagura"],
+      Aamon: ["Saber", "Paquito", "X.Borg", "Gusion", "Hayabusa"],
+      Floryn: ["Eudora", "Kagura", "Paquito", "X.Borg", "Natan"],
+      Natan: ["Hayabusa", "Saber", "Melissa", "Lolita", "Chou"],
+      Aulus: ["Phoveus", "Masha", "Jawhead", "Valir", "Wanwan"],
+      Granger: ["Helcurt", "Selena", "Guinevere", "Gusion", "Saber"],
+      Benedetta: ["Guinevere", "Khufra", "Phoveus", "Minsitthar", "Kaja"],
+      Brody: ["Ling", "Hayabusa", "Karina", "Saber", "Eudora"],
+      Paquito: ["Argus", "Phoveus", "Khufra", "Sun", "Minsitthar"],
+      Alice: ["Chou", "Hanabi", "Aldous", "Harley", "Kaja"],
+      Esmeralda: ["Karrie", "Thamuz", "Dyrroth", "Valir", "Baxia"],
+      Wanwan: ["Natalia", "Esmeralda", "Lunox", "Kaja", "Lolita"],
+      Diggie: ["Aldous", "Lancelot", "Hayabusa", "Helcurt", "Natalia"],
+      "Yi Sun-shin": ["Karina", "Eudora", "Alucard", "Hayabusa", "Fanny"],
+      Eudora: ["Kagura", "Sun", "Hayabusa", "Karina", "Franco"],
+      Sun: ["X.Borg", "Ruby", "Silvanna", "Aulus", "Valir"],
+      "Popol and Kupa": ["Nolan", "Natalia", "Gusion", "Silvanna", "Esmeralda"],
+      "Lapu-Lapu": ["Esmeralda", "Yu Zhong", "Arlott", "Aldous", "Alpha"],
+      Franco: ["Chou", "Freya", "Valir", "Martis", "Minsitthar"],
+      Pharsa: ["Franco", "Fanny", "Jawhead", "Harley", "Helcurt"],
+      Barats: ["X.Borg", "Karrie", "Esmeralda", "Valir", "Angela"],
+      Alpha: ["Freya", "Thamuz", "Valir", "Baxia", "Minsitthar"],
+      Dyrroth: ["Guinevere", "Esmeralda", "Phoveus", "Chou", "Minsitthar"],
+      Masha: ["Belerick", "Thamuz", "Sun", "Lunox", "Dyrroth"],
+      Minsitthar: ["Martis", "Yin", "Grock", "Akai", "Natalia"],
+      Gord: ["Dyrroth", "Lolita", "Yin", "Gusion", "Hayabusa"],
+      Terizla: ["Valir", "Dyrroth", "Lunox", "Karrie", "X.Borg"],
+      Vexana: ["Lylia", "Chou", "Natalia", "Kagura", "Kadita"],
+      Hylos: ["Karrie", "Valir", "Lesley", "Kimmy", "Baxia"],
+      Atlas: ["Valir", "Karrie", "Diggie", "Kaja", "Akai"],
+      Silvanna: ["Wanwan", "X.Borg", "Baxia", "Franco", "Chou"],
+      Layla: ["Hayabusa", "Saber", "Alucard", "Fanny", "Natalia"],
+      Lesley: ["Esmeralda", "Harley", "Helcurt", "Natalia", "Karina"],
+      Zhask: ["Saber", "Natalia", "Fanny", "Hayabusa", "Chou"],
+      Helcurt: ["Argus", "Hayabusa", "Karina", "Minsitthar", "Natalia"],
+      Phoveus: ["Layla", "Baxia", "Yve", "Esmeralda", "Minsitthar"],
+      Ling: ["Valir", "Khufra", "Akai", "Chou", "Gusion"],
+      Claude: ["Popol and Kupa", "Hayabusa", "Selena", "Fanny", "Natalia"],
+      Hayabusa: ["Saber", "Minsitthar", "Natalia", "Kaja", "Chou"],
+      Beatrix: ["Benedetta", "Paquito", "Gusion", "Franco", "Hayabusa"],
+      Gusion: ["Minsitthar", "Lolita", "Ling", "Khufra", "Sun"],
+      Gloo: ["Yu Zhong", "Lancelot", "Faramis", "Vexana", "Wanwan"],
+      Yve: ["Helcurt", "Nana", "Natalia", "Franco", "Kaja"],
+      Zilong: ["Helcurt", "Gatotkaca", "Freya", "Belerick", "Jawhead"],
+      Estes: ["Freya", "Luo Yi", "Baxia", "Fanny", "Eudora"],
+      Harley: ["Jawhead", "Hayabusa", "Saber", "Eudora", "Vale"],
+      Aldous: ["Akai", "Melissa", "Chou", "Kadita", "Kaja"],
+      "Luo Yi": ["Natalia", "Hayabusa", "Gusion", "Franco", "Chou"],
+      Angela: ["Lancelot", "Lesley", "Harley", "Kagura", "Natalia"],
+      Alucard: ["Eudora", "Saber", "Fanny", "Zhask", "Freya"],
+      Uranus: ["Karrie", "Odette", "Dyrroth", "Baxia", "Valir"],
+      YuZhong: ["Karrie", "Dyrroth", "Moskov", "Thamuz", "Valentina"],
+      "Yu Zhong": ["Karrie", "Dyrroth", "Moskov", "Thamuz", "Valentina"],
+      Saber: ["Belerick", "Argus", "Diggie", "Valir", "Hanabi"],
+      Cyclops: ["Ling", "Alice", "Lancelot", "Natalia", "Harley"],
+      Ruby: ["X.Borg", "Yin", "Phoveus", "Valir", "Baxia"],
+      Fanny: ["Phoveus", "Chou", "Eudora", "Franco", "Akai"],
+      Karina: ["Eudora", "Ruby", "Akai", "Natalia", "Franco"],
+      Cecilion: ["Lunox", "Chou", "Yin", "Ling", "X.Borg"],
+      Bane: ["Chou", "Valir", "Martis", "Alucard", "Alpha"],
+      Balmond: ["Dyrroth", "Lunox", "Moskov", "Alpha", "Freya"],
+      Freya: ["Masha", "Melissa", "Esmeralda", "Minsitthar", "Phoveus"],
+      Belerick: ["Dyrroth", "X.Borg", "Karrie", "Martis", "Thamuz"],
+      Carmilla: ["Harith", "Zilong", "Wanwan", "Baxia", "Sun"],
+      Lunox: ["Helcurt", "Claude", "Lancelot", "Gusion", "Leomord"],
+      Harith: ["Minsitthar", "Esmeralda", "Kaja", "Franco", "Phoveus"],
+      "X.Borg": ["Lunox", "Chou", "Esmeralda", "Wanwan", "Natalia"],
+      Akai: ["Diggie", "Odette", "Valir", "Valentina", "Karrie"],
+      Grock: ["Hylos", "X.Borg", "Harley", "Karrie", "Dyrroth"],
+      Khaleed: ["Atlas", "Yu Zhong", "Kimmy", "Helcurt", "Cecilion"],
+      Argus: ["Saber", "Eudora", "Akai", "Natalia", "Kaja"],
+      Clint: ["Eudora", "Akai", "Karina", "Fanny", "Freya"],
+      Vale: ["Chou", "Helcurt", "Harley", "Lancelot", "Fanny"],
+      Novaria: ["Lolita", "Yu Zhong", "Natalia", "Ling", "Fanny"],
+      Ixia: ["Lolita", "Karrie", "Moskov", "Hanabi", "Claude"],
+      Joy: ["Minsitthar", "Phoveus", "Franco", "Kaja", "Barats"],
+      Arlott: ["Martis", "Chou", "Minsitthar", "Kaja", "Thamuz"],
+      Nolan: ["Phoveus", "Khufra", "Franco", "Minsitthar", "Gatotkaca"],
+      Cici: ["Ling", "Lancelot", "Saber", "Akai", "Yve"],
+      Chip: ["Baxia", "Wanwan", "Moskov", "Lesley", "Franco"],
+      Zhuxin: ["Hayabusa", "Lancelot", "Ling", "Natalia", "Saber"],
+      Suyou: ["Thamuz", "X.Borg", "Yin", "Kaja", "Franco"],
+      Lukas: ["Dyrroth", "Yu Zhong", "Freya", "Martis", "Thamuz"],
+      Kalea: ["Minsitthar", "Yin", "Thamuz", "Guinevere", "Alpha"],
+      Zetian: ["Fanny", "Saber", "Nolan", "Guinevere", "Ling"],
+      Obsidia: ["Chou", "Saber", "Joy", "Guinevere", "Fanny"],
+      Sora: ["Franco", "Belerick", "Kaja", "Minotaur", "Thamuz"],
+      Marcel: ["Fanny", "Hayabusa", "Yin", "Lesley", "Kadita"]
+    };
+
+    const fallbackByRole = {
+      Tank: ["Karrie", "Lunox", "Dyrroth", "Valir", "Baxia", "X.Borg"],
+      Fighter: ["Valir", "Karrie", "Ruby", "Dyrroth", "Lunox", "Baxia"],
+      Assassin: ["Khufra", "Minsitthar", "Kaja", "Franco", "Saber", "Ruby"],
+      Mage: ["Natalia", "Hayabusa", "Ling", "Lancelot", "Saber", "Chou"],
+      Marksman: ["Lolita", "Saber", "Kaja", "Natalia", "Hayabusa", "Belerick"],
+      Support: ["Baxia", "Luo Yi", "Valir", "Atlas", "Kaja", "Saber", "Diggie"]
+    };
+
+    const roleSetups = ["Roam", "Jungle", "Mid", "Gold", "EXP"];
+    const slotRoleToHeroRole = {
+      Roam: ["Tank", "Support", "Fighter"],
+      Jungle: ["Assassin", "Fighter", "Tank", "Marksman"],
+      Mid: ["Mage", "Support"],
+      Gold: ["Marksman", "Mage"],
+      EXP: ["Fighter", "Tank", "Mage"]
+    };
+
+    let activeEnemySlot = 0;
+    let activeTeamSlot = -1;
+    let activePoolSlot = -1;
+    let teamPicks = [null, null, null, null, null];
+    let enemyPicks = [null, null, null, null, null];
+    let teamRoles = [ "EXP", "Jungle", "Mid", "Roam", "Gold"];
+    let myHeroPools = [[], [], [], [], []];
+
+    const teamSlots = document.getElementById("teamSlots");
+    const enemySlots = document.getElementById("enemySlots");
+    const recommendSlots = document.getElementById("recommendSlots");
+    const heroList = document.getElementById("heroList");
+    const searchInput = document.getElementById("searchInput");
+    const heroRoleFilter = document.getElementById("heroRoleFilter");
+    const clearSearchBtn = document.getElementById("clearSearchBtn");
+    const blueWinrate = document.getElementById("blueWinrate");
+    const redWinrate = document.getElementById("redWinrate");
+    const advantageStat = document.getElementById("advantageStat");
+    const clashStat = document.getElementById("clashStat");
+    const laneStat = document.getElementById("laneStat");
+    
+
+    searchInput.addEventListener("input", renderHeroList);
+    heroRoleFilter.addEventListener("change", renderHeroList);
+
+    clearSearchBtn.addEventListener("click", () => {
+      searchInput.value = "";
+      heroRoleFilter.value = "All";
+      renderHeroList();
+    });
+    
+
+    function h(name, role, lane, tags) {
+      return { name, role, lane, tags };
+    }
+
+    function findHero(name) {
+      return heroes.find(hero => hero.name.toLowerCase() === name.toLowerCase());
+    }
+
+    function initials(name) {
+      return name.split(" ").map(word => word[0]).join("").slice(0, 2).toUpperCase();
+    }
+
+    function getHeroIcon(hero) {
+      const index = heroes.findIndex(item => item.name === hero.name);
+      return index === -1 ? "" : `hero-icon/${index + 1}.png`;
+    }
+
+    function renderTeamSlots() {
+      teamSlots.querySelectorAll(".slot").forEach(slot => slot.remove());
+
+      for (let i = 0; i < 5; i++) {
+        const hero = teamPicks[i];
+        const slot = document.createElement("div");
+        slot.className = `slot slot${i + 1} ${(activeTeamSlot === i || activePoolSlot === i) ? "active" : ""}`;
+        slot.innerHTML = `
+          ${hero ? `<button class="delete-pick" data-type="team" data-index="${i}" title="Remove hero">×</button>` : ""}
+          <div class="portrait">
+            ${hero ? `<img src="${getHeroIcon(hero)}" alt="${hero.name}">` : "+"}
+          </div>
+          <div class="hero-name">${hero ? hero.name : "Slot " + (i + 1)}</div>
+          <select class="role-select" data-index="${i}">
+            ${roleSetups.map(role => `<option ${teamRoles[i] === role ? "selected" : ""}>${role}</option>`).join("")}
+          </select>
+        `;
+        slot.addEventListener("click", () => {
+          activePoolSlot = i;
+          activeTeamSlot = -1;
+          activeEnemySlot = -1;
+          renderTeamSlots();
+          renderEnemySlots();
+          renderHeroList();
+          renderRecommendations();
+        });
+        teamSlots.appendChild(slot);
+      }
+
+      document.querySelectorAll('.delete-pick[data-type="team"]').forEach(button => {
+        button.addEventListener("click", event => {
+          event.stopPropagation();
+          const index = Number(event.currentTarget.dataset.index);
+          teamPicks[index] = null;
+          activeTeamSlot = index;
+          activeEnemySlot = -1;
+          renderTeamSlots();
+          renderEnemySlots();
+          renderHeroList();
+          renderRecommendations();
+        });
+      });
+
+      document.querySelectorAll(".role-select").forEach(select => {
+        select.addEventListener("click", event => event.stopPropagation());
+        select.addEventListener("change", event => {
+          const index = Number(event.target.dataset.index);
+          teamRoles[index] = event.target.value;
+          // keep all saved heroes even if role changes
+          if (teamPicks[index] && !heroFitsSlot(teamPicks[index], teamRoles[index])) {
+            teamPicks[index] = null;
+          }
+          renderTeamSlots();
+          renderHeroList();
+          renderRecommendations();
+        });
+      });
+    }
+
+    function renderEnemySlots() {
+      enemySlots.querySelectorAll(".slot").forEach(slot => slot.remove());
+
+      for (let i = 0; i < 5; i++) {
+        const hero = enemyPicks[i];
+        const slot = document.createElement("div");
+        slot.className = `slot slot${i + 1} ${activeEnemySlot === i ? "active" : ""}`;
+        slot.innerHTML = `
+          ${hero ? `<button class="delete-pick" data-type="enemy" data-index="${i}" title="Remove hero">×</button>` : ""}
+          <div class="portrait">
+            ${hero ? `<img src="${getHeroIcon(hero)}" alt="${hero.name}">` : "+"}
+          </div>
+          <div class="hero-name">${hero ? hero.name : "Enemy Slot " + (i + 1)}</div>
+          <div class="small-text">${hero ? hero.role + " • " + hero.lane : ""}</div>
+        `;
+        slot.addEventListener("click", () => {
+          activeEnemySlot = i;
+          activeTeamSlot = -1;
+          activePoolSlot = -1;
+          renderEnemySlots();
+          renderTeamSlots();
+          renderHeroList();
+          renderRecommendations();
+        });
+        enemySlots.appendChild(slot);
+      }
+
+      document.querySelectorAll('.delete-pick[data-type="enemy"]').forEach(button => {
+        button.addEventListener("click", event => {
+          event.stopPropagation();
+          const index = Number(event.currentTarget.dataset.index);
+          enemyPicks[index] = null;
+          activeEnemySlot = index;
+          activeTeamSlot = -1;
+          renderEnemySlots();
+          renderTeamSlots();
+          renderHeroList();
+          renderRecommendations();
+        });
+      });
+    }
+
+    function renderHeroList() {
+      const query = searchInput.value.trim().toLowerCase();
+      const filterRole = heroRoleFilter.value;
+
+      const filtered = heroes.filter(hero => {
+        const fullText = `${hero.name} ${hero.role} ${hero.lane} ${hero.tags.join(" ")}`.toLowerCase();
+        const matchesSearch = !query || fullText.includes(query);
+        const matchesRole = filterRole === "All" || hero.role === filterRole;
+        const matchesActiveTeamSlot = true;
+        return matchesSearch && matchesRole && matchesActiveTeamSlot;
+      });
+
+      heroList.innerHTML = "";
+
+      filtered.forEach(hero => {
+        const card = document.createElement("button");
+
+        const alreadyAddedToAnyPool = myHeroPools.some(pool =>
+          pool.some(poolHero => poolHero.name === hero.name)
+        );
+
+        const alreadyPickedOnTeam = teamPicks.some(pick => pick && pick.name === hero.name);
+        const alreadyPickedOnEnemy = enemyPicks.some(pick => pick && pick.name === hero.name);
+        const alreadyPicked = alreadyPickedOnTeam || alreadyPickedOnEnemy;
+        const alreadyAdded = alreadyAddedToAnyPool || alreadyPicked;
+
+        card.className = `hero-card ${alreadyAddedToAnyPool ? "added-to-pool" : ""} ${alreadyPicked ? "picked-hero" : ""}`;
+        const isBlueSlotSelected = activeTeamSlot !== -1 || activePoolSlot !== -1;
+        card.innerHTML = `
+          ${alreadyAdded ? `<span class="hero-card-check">✓</span>` : ""}
+
+          <div class="hero-list-icon">
+            <img src="${getHeroIcon(hero)}" alt="${hero.name}">
+          </div>
+
+          <div class="hero-list-info">
+            <strong>${hero.name}</strong>
+            <small>${hero.role} • ${hero.lane}</small>
+          </div>
+
+          ${isBlueSlotSelected ? `
+          <div class="hero-card-actions">
+            <button class="hero-action-btn add-btn" type="button">Add</button>
+            
+          </div>
+          ` : ""}
+        `;
+        const addButton = card.querySelector(".add-btn");
+
+        if (addButton) {
+          addButton.addEventListener("click", event => {
+            event.stopPropagation();
+
+            const targetPool = activePoolSlot !== -1
+              ? activePoolSlot
+              : activeTeamSlot;
+
+            if (targetPool === -1) return;
+
+            if (!myHeroPools[targetPool]) myHeroPools[targetPool] = [];
+
+            const alreadyExists = myHeroPools[targetPool]
+              .some(poolHero => poolHero.name === hero.name);
+
+            if (!alreadyExists) {
+              myHeroPools[targetPool].push(hero);
+            }
+
+            renderHeroList();
+            renderRecommendations();
+          });
+        }
+
+        card.addEventListener("click", () => {
+          if (activeEnemySlot !== -1 && activeTeamSlot === -1 && activePoolSlot === -1) {
+            enemyPicks[activeEnemySlot] = hero;
+            renderEnemySlots();
+            renderTeamSlots();
+            renderHeroList();
+            renderRecommendations();
+            return;
+          }
+
+          if (activePoolSlot !== -1 || activeTeamSlot !== -1) {
+            const targetSlot = activeTeamSlot !== -1
+              ? activeTeamSlot
+              : activePoolSlot;
+
+            if (targetSlot === -1) return;
+
+            teamPicks[targetSlot] = hero;
+            activeTeamSlot = targetSlot;
+            activePoolSlot = -1;
+            activeEnemySlot = -1;
+
+            renderTeamSlots();
+            renderEnemySlots();
+            renderHeroList();
+            renderRecommendations();
+          }
+        });
+
+        heroList.appendChild(card);
+      });
+    }
+
+    function getCounterScores() {
+      const pickedEnemies = enemyPicks.filter(Boolean);
+      const scoreMap = new Map();
+
+      function addHeroScore(heroName, points) {
+        const hero = findHero(heroName);
+        if (!hero) return;
+        if (enemyPicks.some(enemy => enemy && enemy.name === hero.name)) return;
+        scoreMap.set(hero.name, (scoreMap.get(hero.name) || 0) + points);
+      }
+
+      function addByHeroTags(enemy, wantedTags, points) {
+        heroes.forEach(hero => {
+          if (enemyPicks.some(pick => pick && pick.name === hero.name)) return;
+          const matchCount = hero.tags.filter(tag => wantedTags.includes(tag)).length;
+          if (matchCount > 0) addHeroScore(hero.name, points * matchCount);
+        });
+      }
+
+      function addByHeroNames(names, points) {
+        names.forEach(name => addHeroScore(name, points));
+      }
+
+      pickedEnemies.forEach(enemy => {
+        // 1. Direct counter data has the highest priority.
+        (counterMap[enemy.name] || []).forEach((name, index) => {
+          addHeroScore(name, Math.max(12, 25 - index * 2));
+        });
+
+        const tags = enemy.tags;
+
+        // 2. Skill/mechanic-based counter logic.
+        if (tags.some(tag => ["dash", "mobility", "immune", "untargetable", "stance"].includes(tag))) {
+          addByHeroTags(enemy, ["anti-dash", "suppress", "lock", "cc-chain"], 8);
+          addByHeroNames(["Khufra", "Minsitthar", "Phoveus", "Kaja", "Franco", "Saber", "Ruby"], 10);
+        }
+
+        if (tags.some(tag => ["heal", "shield", "sustain", "regen", "lifesteal"].includes(tag))) {
+          addByHeroTags(enemy, ["anti-heal", "true-damage", "anti-tank", "armor-break"], 8);
+          addByHeroNames(["Baxia", "Dyrroth", "Karrie", "Lunox", "X.Borg", "Valir"], 9);
+        }
+
+        if (tags.some(tag => ["frontline", "durable", "tank", "sustain", "slow"].includes(tag))) {
+          addByHeroTags(enemy, ["anti-tank", "true-damage", "armor-break", "poke"], 7);
+          addByHeroNames(["Karrie", "Lunox", "Dyrroth", "X.Borg", "Valir", "Baxia"], 8);
+        }
+
+        if (tags.some(tag => ["set", "aoe-cc", "teamfight", "combo"].includes(tag))) {
+          addByHeroTags(enemy, ["anti-cc", "pushback", "cleanse", "immune", "zone"], 8);
+          addByHeroNames(["Diggie", "Valir", "Kagura", "Wanwan", "Akai", "Lolita"], 9);
+        }
+
+        if (tags.some(tag => ["range", "poke", "artillery", "scaling", "global", "vision"].includes(tag))) {
+          addByHeroTags(enemy, ["stealth", "mobility", "pickoff", "burst", "dive"], 7);
+          addByHeroNames(["Natalia", "Hayabusa", "Ling", "Lancelot", "Saber", "Chou", "Fanny", "Nolan"], 8);
+        }
+
+        if (tags.some(tag => ["burst", "pickoff", "single-target", "lock"].includes(tag))) {
+          addByHeroTags(enemy, ["frontline", "shield", "anti-cc", "safety", "durable"], 5);
+          addByHeroNames(["Lolita", "Diggie", "Belerick", "Akai", "Ruby", "Minotaur"], 6);
+        }
+
+        if (tags.some(tag => ["split-push", "clone", "push"].includes(tag))) {
+          addByHeroTags(enemy, ["cc-chain", "pickoff", "global", "lock", "zone"], 6);
+          addByHeroNames(["Ruby", "Chou", "Kaja", "Franco", "Aldous", "Yi Sun-shin"], 7);
+        }
+      });
+
+      return scoreMap;
+    }
+
+    function getTeamRoleBonus(hero, selectedSlotRole) {
+      const laneText = hero.lane.toLowerCase();
+      let bonus = 0;
+
+      if (selectedSlotRole === "Roam") {
+        if (laneText.includes("roam")) bonus += 5;
+        if (hero.role === "Tank" || hero.role === "Support") bonus += 3;
+        if (hero.tags.some(tag => ["set", "anti-cc", "suppress", "frontline", "vision", "pickoff", "pushback"].includes(tag))) bonus += 4;
+      }
+
+      if (selectedSlotRole === "Jungle") {
+        if (laneText.includes("jungle")) bonus += 6;
+        if (hero.tags.some(tag => ["objective", "tempo", "mobility", "burst", "sustain", "reset"].includes(tag))) bonus += 4;
+      }
+
+      if (selectedSlotRole === "Mid") {
+        if (laneText.includes("mid")) bonus += 6;
+        if (hero.tags.some(tag => ["wave-clear", "zone", "poke", "burst", "cc", "range", "vision"].includes(tag))) bonus += 4;
+      }
+
+      if (selectedSlotRole === "Gold") {
+        if (laneText.includes("gold")) bonus += 6;
+        if (hero.tags.some(tag => ["dps", "scaling", "range", "siege", "true-damage", "anti-tank"].includes(tag))) bonus += 4;
+      }
+
+      if (selectedSlotRole === "EXP") {
+        if (laneText.includes("exp")) bonus += 6;
+        if (hero.tags.some(tag => ["frontline", "sustain", "dive", "teamfight", "duel", "split-push"].includes(tag))) bonus += 4;
+      }
+
+      return bonus;
+    }
+
+    function getTeamDuplicatePenalty(hero, slotIndex) {
+      return teamPicks.some((pick, index) => index !== slotIndex && pick && pick.name === hero.name) ? 999 : 0;
+    }
+
+    function getEnemyWinConditionPressure(hero) {
+      const enemies = enemyPicks.filter(Boolean);
+      let score = 0;
+
+      enemies.forEach(enemy => {
+        const enemyTags = enemy.tags;
+        const heroTags = hero.tags;
+
+        if (enemyTags.some(tag => ["dash", "mobility", "immune", "untargetable", "stance"].includes(tag)) &&
+            heroTags.some(tag => ["anti-dash", "suppress", "lock", "cc-chain"].includes(tag))) score += 14;
+
+        if (enemyTags.some(tag => ["heal", "shield", "sustain", "regen", "lifesteal"].includes(tag)) &&
+            heroTags.some(tag => ["anti-heal", "true-damage", "anti-tank", "armor-break"].includes(tag))) score += 13;
+
+        if (enemyTags.some(tag => ["set", "aoe-cc", "teamfight", "combo"].includes(tag)) &&
+            heroTags.some(tag => ["anti-cc", "pushback", "cleanse", "immune", "zone"].includes(tag))) score += 12;
+
+        if (enemyTags.some(tag => ["range", "poke", "artillery", "scaling", "vision"].includes(tag)) &&
+            heroTags.some(tag => ["stealth", "mobility", "pickoff", "burst", "dive"].includes(tag))) score += 10;
+
+        if (enemyTags.some(tag => ["frontline", "durable", "sustain", "slow"].includes(tag)) &&
+            heroTags.some(tag => ["anti-tank", "true-damage", "armor-break", "poke"].includes(tag))) score += 10;
+
+        if (enemyTags.some(tag => ["split-push", "clone", "push"].includes(tag)) &&
+            heroTags.some(tag => ["cc-chain", "pickoff", "global", "lock", "zone"].includes(tag))) score += 8;
+      });
+
+      return score;
+    }
+
+    function getMythicalGloryRoleScore(hero, selectedSlotRole) {
+      const laneText = hero.lane.toLowerCase();
+      const tags = hero.tags;
+      let score = 0;
+
+      if (selectedSlotRole === "Roam") {
+        if (laneText.includes("roam")) score += 12;
+        if (["Tank", "Support"].includes(hero.role)) score += 8;
+        if (tags.some(tag => ["set", "anti-cc", "suppress", "frontline", "vision", "pickoff", "pushback", "cc-chain"].includes(tag))) score += 12;
+        if (tags.some(tag => ["scaling", "split-push"] .includes(tag))) score -= 4;
+      }
+
+      if (selectedSlotRole === "Jungle") {
+        if (laneText.includes("jungle")) score += 12;
+        if (tags.some(tag => ["objective", "tempo", "mobility", "burst", "sustain", "reset", "invade"].includes(tag))) score += 11;
+        if (tags.some(tag => ["heal", "utility"] .includes(tag))) score -= 5;
+      }
+
+      if (selectedSlotRole === "Mid") {
+        if (laneText.includes("mid")) score += 12;
+        if (tags.some(tag => ["wave-clear", "zone", "poke", "burst", "cc", "range", "vision", "rotation"].includes(tag))) score += 11;
+        if (tags.some(tag => ["split-push", "duel"] .includes(tag))) score -= 4;
+      }
+
+      if (selectedSlotRole === "Gold") {
+        if (laneText.includes("gold")) score += 12;
+        if (tags.some(tag => ["dps", "scaling", "range", "siege", "true-damage", "anti-tank", "attack-speed"].includes(tag))) score += 11;
+        if (tags.some(tag => ["frontline", "set"] .includes(tag))) score -= 5;
+      }
+
+      if (selectedSlotRole === "EXP") {
+        if (laneText.includes("exp")) score += 12;
+        if (tags.some(tag => ["frontline", "sustain", "dive", "teamfight", "duel", "split-push", "backline"].includes(tag))) score += 11;
+        if (tags.some(tag => ["scaling"] .includes(tag))) score -= 2;
+      }
+
+      return score;
+    }
+
+    function getHighRankDraftPenalty(hero, slotIndex) {
+      const allies = teamPicks.filter((pick, index) => index !== slotIndex && pick);
+      let penalty = 0;
+      const testTeam = [...allies, hero];
+
+      const physicalCount = testTeam.filter(pick => ["Marksman", "Assassin", "Fighter"].includes(pick.role)).length;
+      const magicCount = testTeam.filter(pick => pick.role === "Mage" || pick.tags.includes("magic") || pick.tags.includes("magic-dps")).length;
+      const frontlineCount = testTeam.filter(pick => ["Tank", "Fighter"].includes(pick.role) || pick.tags.some(tag => ["frontline", "durable", "sustain"].includes(tag))).length;
+      const hardCcCount = testTeam.filter(pick => pick.tags.some(tag => ["set", "aoe-cc", "suppress", "lock", "cc-chain", "stun", "morph", "freeze", "cc"].includes(tag))).length;
+      const scalingCount = testTeam.filter(pick => pick.tags.includes("scaling")).length;
+      const earlyCount = testTeam.filter(pick => pick.tags.some(tag => ["early", "tempo", "lane-bully", "invade", "objective"].includes(tag))).length;
+      const backlineAccessCount = testTeam.filter(pick => pick.tags.some(tag => ["dive", "mobility", "stealth", "pickoff", "backline"].includes(tag))).length;
+      const waveClearCount = testTeam.filter(pick => pick.tags.some(tag => ["wave-clear", "poke", "zone", "range", "artillery"].includes(tag))).length;
+      const objectiveCount = testTeam.filter(pick => pick.tags.some(tag => ["objective", "tempo", "zone", "vision", "frontline"].includes(tag))).length;
+
+      if (testTeam.length >= 3 && frontlineCount === 0) penalty += 20;
+      if (testTeam.length >= 3 && hardCcCount === 0) penalty += 14;
+      if (testTeam.length >= 4 && physicalCount >= 4 && magicCount === 0) penalty += 18;
+      if (testTeam.length >= 4 && magicCount >= 3 && physicalCount <= 1) penalty += 14;
+      if (scalingCount >= 3 && earlyCount === 0) penalty += 16;
+      if (testTeam.length >= 4 && backlineAccessCount === 0) penalty += 10;
+      if (testTeam.length >= 4 && waveClearCount === 0) penalty += 9;
+      if (testTeam.length >= 4 && objectiveCount === 0) penalty += 8;
+
+      return penalty;
+    }
+
+    function getEnemyDraftThreatScore(hero) {
+      const enemies = enemyPicks.filter(Boolean);
+      let penalty = 0;
+
+      enemies.forEach(enemy => {
+        const enemyCountersHero = counterMap[hero.name] || [];
+        const index = enemyCountersHero.indexOf(enemy.name);
+        if (index !== -1) penalty += Math.max(8, 18 - index * 2);
+
+        if (enemy.tags.some(tag => ["anti-dash", "suppress", "lock", "cc-chain"].includes(tag)) &&
+            hero.tags.some(tag => ["dash", "mobility", "immune", "untargetable", "stance"].includes(tag))) penalty += 8;
+
+        if (enemy.tags.some(tag => ["anti-heal", "true-damage", "anti-tank", "armor-break"].includes(tag)) &&
+            hero.tags.some(tag => ["heal", "shield", "sustain", "regen", "lifesteal", "frontline"].includes(tag))) penalty += 7;
+      });
+
+      return penalty;
+    }
+
+    function getDraftSideScore(team, enemy) {
+      let counterScore = 0;
+      let clashScore = 0;
+      let laneScore = 0;
+      let comboScore = 0;
+
+      team.forEach((hero, index) => {
+        if (!hero) return;
+
+        enemy.forEach(enemyHero => {
+          if (!enemyHero) return;
+          const directCounters = counterMap[enemyHero.name] || [];
+          const counterIndex = directCounters.indexOf(hero.name);
+          if (counterIndex !== -1) counterScore += Math.max(4, 12 - counterIndex * 2);
+
+          if (hero.tags.some(tag => ["set", "aoe-cc", "teamfight", "zone"].includes(tag))) clashScore += 2;
+          if (hero.tags.some(tag => ["anti-cc", "pushback", "frontline", "shield"].includes(tag))) clashScore += 2;
+
+          if (enemyHero.tags.some(tag => ["heal", "sustain", "shield"].includes(tag)) && hero.tags.some(tag => ["anti-heal", "true-damage", "anti-tank", "armor-break"].includes(tag))) counterScore += 4;
+          if (enemyHero.tags.some(tag => ["dash", "mobility", "immune"].includes(tag)) && hero.tags.some(tag => ["anti-dash", "suppress", "lock", "cc-chain"].includes(tag))) counterScore += 4;
+        });
+
+        if (heroFitsSlot(hero, teamRoles[index] || "")) laneScore += 8;
+        else laneScore -= 4;
+
+        comboScore += getTeamSynergyScore(hero, index);
+      });
+
+      return {
+        counter: counterScore,
+        clash: clashScore + comboScore,
+        lane: laneScore,
+        total: counterScore + clashScore + laneScore + comboScore
+      };
+    }
+
+    function percentPair(blueValue, redValue) {
+      const blue = Math.max(0, blueValue);
+      const red = Math.max(0, redValue);
+      const total = blue + red;
+      if (total === 0) return [50, 50];
+      const bluePercent = Math.round((blue / total) * 100);
+      return [bluePercent, 100 - bluePercent];
+    }
+
+    function updateDraftHeader() {
+      const blueScore = getDraftSideScore(teamPicks, enemyPicks);
+      const redScore = getDraftSideScore(enemyPicks, teamPicks);
+
+      const [blueTotal, redTotal] = percentPair(blueScore.total, redScore.total);
+      const [blueAdv, redAdv] = percentPair(blueScore.counter, redScore.counter);
+      const [blueClash, redClash] = percentPair(blueScore.clash, redScore.clash);
+      const [blueLane, redLane] = percentPair(blueScore.lane, redScore.lane);
+
+      blueWinrate.textContent = `${blueTotal}%`;
+      redWinrate.textContent = `${redTotal}%`;
+      advantageStat.textContent = `${blueAdv} - ${redAdv}`;
+      clashStat.textContent = `${blueClash} - ${redClash}`;
+      laneStat.textContent = `${blueLane} - ${redLane}`;
+
+      document.querySelector("header").style.setProperty("--blue-fill", `${blueTotal}%`);
+    }
+
+    function getTeamSynergyScore(hero, slotIndex) {
+      const allies = teamPicks.filter((pick, index) => index !== slotIndex && pick);
+      let score = 0;
+
+      allies.forEach(ally => {
+        const allyTags = ally.tags;
+        const heroTags = hero.tags;
+
+        if (
+          (allyTags.some(tag => ["set", "aoe-cc", "teamfight"].includes(tag)) && heroTags.some(tag => ["aoe", "burst", "teamfight", "zone"].includes(tag))) ||
+          (heroTags.some(tag => ["set", "aoe-cc", "teamfight"].includes(tag)) && allyTags.some(tag => ["aoe", "burst", "teamfight", "zone"].includes(tag)))
+        ) score += 10;
+
+        if (allyTags.includes("pickoff") && heroTags.some(tag => ["burst", "lock", "suppress", "single-target"].includes(tag))) score += 8;
+        if (heroTags.includes("pickoff") && allyTags.some(tag => ["burst", "lock", "suppress", "single-target"].includes(tag))) score += 8;
+
+        if (allyTags.some(tag => ["dive", "mobility", "backline"].includes(tag)) && heroTags.some(tag => ["dive", "mobility", "shield", "global"].includes(tag))) score += 7;
+
+        if (ally.role === "Marksman" && heroTags.some(tag => ["frontline", "shield", "anti-cc", "cc", "set"].includes(tag))) score += 7;
+        if (hero.role === "Marksman" && allyTags.some(tag => ["frontline", "shield", "anti-cc", "cc", "set"].includes(tag))) score += 7;
+
+        if (allyTags.some(tag => ["heal", "shield", "sustain"].includes(tag)) && heroTags.some(tag => ["frontline", "teamfight", "dps", "durable"].includes(tag))) score += 6;
+        if (heroTags.some(tag => ["heal", "shield", "sustain"].includes(tag)) && allyTags.some(tag => ["frontline", "teamfight", "dps", "durable"].includes(tag))) score += 6;
+
+        if (allyTags.some(tag => ["objective", "frontline", "tempo"].includes(tag)) && heroTags.some(tag => ["zone", "poke", "vision", "range"].includes(tag))) score += 5;
+        if (heroTags.some(tag => ["objective", "frontline", "tempo"].includes(tag)) && allyTags.some(tag => ["zone", "poke", "vision", "range"].includes(tag))) score += 5;
+      });
+
+      const teamHasMage = allies.some(pick => pick.role === "Mage" || pick.tags.includes("magic"));
+      const teamHasPhysical = allies.some(pick => ["Marksman", "Assassin", "Fighter"].includes(pick.role));
+      if (!teamHasMage && (hero.role === "Mage" || hero.tags.includes("magic"))) score += 5;
+      if (!teamHasPhysical && ["Marksman", "Assassin", "Fighter"].includes(hero.role)) score += 5;
+
+      return score;
+    }
+
+    function getComboScore(hero, slotIndex) {
+      const allies = teamPicks.filter((pick, index) => index !== slotIndex && pick);
+      let score = 0;
+
+      allies.forEach(ally => {
+        const allyTags = ally.tags;
+        const heroTags = hero.tags;
+
+        if (allyTags.some(tag => ["set", "aoe-cc", "teamfight", "zone"].includes(tag)) &&
+            heroTags.some(tag => ["aoe", "burst", "teamfight", "poke", "zone"].includes(tag))) {
+          score += 10;
+        }
+
+        if (allyTags.some(tag => ["heal", "shield", "utility", "speed"].includes(tag)) &&
+            heroTags.some(tag => ["dive", "mobility", "frontline", "sustain", "duel"].includes(tag))) {
+          score += 7;
+        }
+
+        if (allyTags.some(tag => ["pickoff", "lock", "suppress", "hook", "stun"].includes(tag)) &&
+            heroTags.some(tag => ["burst", "single-target", "pickoff", "chase"].includes(tag))) {
+          score += 8;
+        }
+
+        if (allyTags.some(tag => ["frontline", "durable", "tank", "sustain"].includes(tag)) &&
+            heroTags.some(tag => ["range", "scaling", "dps", "poke", "artillery"].includes(tag))) {
+          score += 6;
+        }
+
+        if (allyTags.some(tag => ["global", "portal", "teleport"].includes(tag)) &&
+            heroTags.some(tag => ["pickoff", "split-push", "mobility", "dive"].includes(tag))) {
+          score += 6;
+        }
+
+        if (ally.role === "Tank" && hero.role === "Marksman") score += 3;
+        if (ally.role === "Support" && ["Assassin", "Fighter", "Marksman"].includes(hero.role)) score += 3;
+        if (ally.role === "Mage" && ["Tank", "Fighter"].includes(hero.role)) score += 2;
+      });
+
+      return score;
+    }
+
+    function heroFitsSlot(hero, selectedSlotRole) {
+      if (!hero || !selectedSlotRole) return false;
+
+      const laneText = hero.lane.toLowerCase();
+
+      if (selectedSlotRole === "Roam") {
+        return laneText.includes("roam") || hero.role === "Tank" || hero.role === "Support";
+      }
+
+      if (selectedSlotRole === "Jungle") {
+        return laneText.includes("jungle");
+      }
+
+      if (selectedSlotRole === "Mid") {
+        return laneText.includes("mid");
+      }
+
+      if (selectedSlotRole === "Gold") {
+        return laneText.includes("gold");
+      }
+
+      if (selectedSlotRole === "EXP") {
+        return laneText.includes("exp");
+      }
+
+      return false;
+    }
+
+    function getRoleFallbackHeroes(selectedSlotRole) {
+      return heroes
+        .filter(hero => heroFitsSlot(hero, selectedSlotRole))
+        .filter(hero => !enemyPicks.some(enemy => enemy && enemy.name === hero.name))
+        .filter(hero => !teamPicks.some(pick => pick && pick.name === hero.name))
+        .sort((a, b) => a.name.localeCompare(b.name));
+    }
+
+    function getRecommendationsForSlot(slotIndex) {
+      const selectedSlotRole = teamRoles[slotIndex];
+      const counterScores = getCounterScores();
+      const hasEnemyPick = enemyPicks.some(Boolean);
+      const pickedNames = new Set([
+        ...enemyPicks.filter(Boolean).map(hero => hero.name),
+        ...teamPicks.filter(Boolean).map(hero => hero.name)
+      ]);
+
+      const ranked = heroes
+        .filter(hero => heroFitsSlot(hero, selectedSlotRole))
+        .filter(hero => !pickedNames.has(hero.name))
+        .map(hero => {
+          const directAndMechanicScore = hasEnemyPick ? (counterScores.get(hero.name) || 0) : 0;
+          const roleBonus = getMythicalGloryRoleScore(hero, selectedSlotRole);
+          const comboScore = getComboScore(hero, slotIndex);
+          const enemyPressureScore = getEnemyWinConditionPressure(hero);
+          const enemyThreatPenalty = getEnemyDraftThreatScore(hero);
+          const duplicatePenalty = getTeamDuplicatePenalty(hero, slotIndex);
+          const draftPenalty = getHighRankDraftPenalty(hero, slotIndex);
+
+          const score =
+            directAndMechanicScore * 1.55 +
+            enemyPressureScore * 1.25 +
+            comboScore * 1.2 +
+            roleBonus -
+            enemyThreatPenalty * 1.15 -
+            draftPenalty -
+            duplicatePenalty;
+
+          return {
+            ...hero,
+            score,
+            counterScore: directAndMechanicScore + enemyPressureScore,
+            comboScore,
+            safeScore: roleBonus + comboScore - enemyThreatPenalty - draftPenalty
+          };
+        })
+        .filter(hero => hero.score > -100)
+        .sort((a, b) => {
+          if (b.score !== a.score) return b.score - a.score;
+          if (b.counterScore !== a.counterScore) return b.counterScore - a.counterScore;
+          if ((b.comboScore || 0) !== (a.comboScore || 0)) return (b.comboScore || 0) - (a.comboScore || 0);
+          return a.name.localeCompare(b.name);
+        });
+
+      if (!hasEnemyPick) {
+        return ranked
+          .filter(hero => hero.safeScore >= 8)
+          .slice(0, 12);
+      }
+
+      const counterPicks = ranked
+        .filter(hero => hero.counterScore >= 12)
+        .slice(0, 12);
+
+      const safePicks = ranked
+        .filter(hero => hero.counterScore < 12)
+        .filter(hero => hero.safeScore >= 10)
+        .slice(0, 8);
+
+      const finalList = [];
+      const seen = new Set();
+
+      [...counterPicks, ...safePicks].forEach(hero => {
+        if (!seen.has(hero.name)) {
+          seen.add(hero.name);
+          finalList.push(hero);
+        }
+      });
+
+      return finalList;
+    }
+
+    function reasonFor(hero) {
+      if (["Khufra", "Minsitthar", "Phoveus"].includes(hero.name)) return "Anti-dash answer.";
+      if (["Kaja", "Franco", "Saber"].includes(hero.name)) return "Lockdown pickoff.";
+      if (hero.name === "Baxia") return "Anti-heal and sustain counter.";
+      if (["Karrie", "Lunox", "Dyrroth"].includes(hero.name)) return "Anti-tank damage.";
+      if (["Natalia", "Hayabusa", "Ling", "Lancelot"].includes(hero.name)) return "Backline access.";
+      if (hero.name === "Diggie") return "Anti-set and anti-CC.";
+      if (hero.name === "Valir") return "Anti-dive control.";
+      if (hero.name === "Luo Yi") return "Punishes grouped enemies.";
+      return "Good counter from current enemy picks.";
+    }
+
+    function pickHeroForTeam(slotIndex, heroName) {
+      teamPicks[slotIndex] = findHero(heroName);
+      activeTeamSlot = slotIndex;
+      activePoolSlot = -1;
+      activeEnemySlot = -1;
+      renderTeamSlots();
+      renderEnemySlots();
+      renderHeroList();
+      renderRecommendations();
+    }
+
+    function removeFromMyHeroPool(slotIndex, heroName) {
+      myHeroPools[slotIndex] = myHeroPools[slotIndex].filter(hero => hero.name !== heroName);
+      renderTeamSlots();
+      renderEnemySlots();
+      renderHeroList();
+      renderRecommendations();
+    }
+
+    function rankHeroesForSlot(heroList, slotIndex) {
+      const selectedSlotRole = teamRoles[slotIndex];
+      const counterScores = getCounterScores();
+      const hasEnemyPick = enemyPicks.some(Boolean);
+
+      return heroList
+        .filter(hero => !enemyPicks.some(enemy => enemy && enemy.name === hero.name))
+        .map(hero => {
+          const directAndMechanicScore = hasEnemyPick ? (counterScores.get(hero.name) || 0) : 0;
+          const roleBonus = getMythicalGloryRoleScore(hero, selectedSlotRole);
+          const comboScore = getComboScore(hero, slotIndex);
+          const enemyPressureScore = getEnemyWinConditionPressure(hero);
+          const enemyThreatPenalty = getEnemyDraftThreatScore(hero);
+          const duplicatePenalty = getTeamDuplicatePenalty(hero, slotIndex);
+          const draftPenalty = getHighRankDraftPenalty(hero, slotIndex);
+
+          return {
+            ...hero,
+            score:
+              directAndMechanicScore * 1.55 +
+              enemyPressureScore * 1.25 +
+              comboScore * 1.2 +
+              roleBonus -
+              enemyThreatPenalty * 1.15 -
+              draftPenalty -
+              duplicatePenalty,
+            counterScore: directAndMechanicScore + enemyPressureScore,
+            comboScore
+          };
+        })
+        .filter(hero => hero.score > -100)
+        .sort((a, b) => {
+          if (b.score !== a.score) return b.score - a.score;
+          if (b.counterScore !== a.counterScore) return b.counterScore - a.counterScore;
+          if ((b.comboScore || 0) !== (a.comboScore || 0)) return (b.comboScore || 0) - (a.comboScore || 0);
+          return a.name.localeCompare(b.name);
+        });
+    }
+
+    function renderHeroCard(hero, rank, slotIndex, extraClass = "", canPick = true) {
+      const card = document.createElement("div");
+      card.className = `rec-card ${extraClass}`;
+      card.title = `${rank}. ${hero.name}`;
+      card.innerHTML = `
+        ${extraClass.includes("my-hero-card") ? `<button class="pool-remove" title="Remove from my heroes">×</button>` : ""}
+        <span class="rank-num">${rank}</span>
+        <img src="${getHeroIcon(hero)}" alt="${hero.name}" title="${hero.name}">
+        <strong>${hero.name}</strong>
+      `;
+
+      const removeButton = card.querySelector(".pool-remove");
+      if (removeButton) {
+        removeButton.addEventListener("click", event => {
+          event.stopPropagation();
+          removeFromMyHeroPool(slotIndex, hero.name);
+        });
+      }
+
+      if (canPick) {
+        card.addEventListener("click", () => {
+          pickHeroForTeam(slotIndex, hero.name);
+        });
+      }
+
+      return card;
+    }
+
+    function renderRecommendations() {
+      updateDraftHeader();
+      recommendSlots.querySelectorAll(".recommend-slot").forEach(slot => slot.remove());
+
+      for (let i = 0; i < 5; i++) {
+        const allRecs = getRecommendationsForSlot(i);
+        const myHeroes = rankHeroesForSlot(myHeroPools[i], i);
+        const slot = document.createElement("div");
+        slot.className = `recommend-slot slot${i + 1}`;
+
+        const content = document.createElement("div");
+        content.className = "recommend-content";
+
+        const myRow = document.createElement("div");
+        myRow.className = "my-heroes";
+
+        myHeroes.forEach((hero, index) => {
+          myRow.appendChild(renderHeroCard(hero, index + 1, i, "my-hero-card", true));
+        });
+
+        const recRow = document.createElement("div");
+        recRow.className = "recommend-hero";
+        allRecs.forEach((hero, index) => {
+          recRow.appendChild(renderHeroCard(hero, index + 1, i));
+        });
+
+        content.appendChild(myRow);
+        content.appendChild(recRow);
+        slot.appendChild(content);
+        recommendSlots.appendChild(slot);
+      }
+    }
+
+    renderTeamSlots();
+    renderEnemySlots();
+    renderHeroList();
+    renderRecommendations();
+  </script>
+</body>
+</html>
